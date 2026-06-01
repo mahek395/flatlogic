@@ -1,41 +1,29 @@
+// components/home/NewArrivals.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-
-interface Product {
-  _id: string;
-  name: string;
-  price: number;
-  images: string[];
-  category: { name: string; slug: string } | string;
-}
+import { getNewArrivals, getProductPrice } from '@/lib/medusa';
+import { MedusaProduct } from '@/models/Product';
 
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&q=70';
 
 export default function NewArrivals() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<MedusaProduct[]>([]);
+  const [loading, setLoading]   = useState(true);
 
   useEffect(() => {
-    fetch('/api/products?newArrival=true&limit=6')
-      .then((r) => r.json())
-      .then((d) => { setProducts(d.data || []); setLoading(false); })
-      .catch(() => setLoading(false));
+    getNewArrivals(6)
+      .then(setProducts)
+      .finally(() => setLoading(false));
   }, []);
-
-  const getCategoryName = (cat: Product['category']) => {
-    if (!cat) return '';
-    if (typeof cat === 'string') return cat;
-    return cat.name;
-  };
 
   return (
     <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* Header — centered, exactly like the screenshot */}
+        {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">New Arrivals</h2>
           <p className="text-gray-500 text-base max-w-4xl mx-auto leading-relaxed">
@@ -44,7 +32,7 @@ export default function NewArrivals() {
           </p>
         </div>
 
-        {/* Product grid — 4 columns, no card border, clean */}
+        {/* Grid */}
         {loading ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
             {[...Array(4)].map((_, i) => (
@@ -59,12 +47,16 @@ export default function NewArrivals() {
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-12">
             {products.map((product) => (
-              <Link key={product._id} href={`/products/${product._id}`} className="group block">
-                {/* Image — square, light gray bg, no border radius */}
+              <Link
+                key={product.id}
+                href={`/products/${product.handle}`}  
+                className="group block"
+              >
+                {/* Image */}
                 <div className="relative aspect-square bg-gray-100 mb-4 overflow-hidden">
                   <Image
-                    src={product.images?.[0] || PLACEHOLDER}
-                    alt={product.name}
+                    src={product.thumbnail || PLACEHOLDER}
+                    alt={product.title}
                     fill
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                     sizes="(max-width: 768px) 50vw, 25vw"
@@ -72,24 +64,26 @@ export default function NewArrivals() {
                   />
                 </div>
 
-                {/* Category label — small gray, above name */}
+                {/* No category in basic product list — show variant count instead */}
                 <p className="text-sm text-gray-400 mb-1">
-                  {getCategoryName(product.category)}
+                  {product.variants.length} variant{product.variants.length !== 1 ? 's' : ''}
                 </p>
 
-                {/* Product name — bold */}
+                {/* Title */}
                 <h3 className="text-base font-bold text-gray-900 mb-1 group-hover:text-[#c17f4a] transition-colors">
-                  {product.name}
+                  {product.title}
                 </h3>
 
-                {/* Price */}
-                <p className="text-base text-gray-900">${product.price}</p>
+                {/* Price — Medusa stores cents, divide by 100 */}
+                <p className="text-base text-gray-900">
+                  ${getProductPrice(product).toFixed(2)}
+                </p>
               </Link>
             ))}
           </div>
         )}
 
-        {/* VIEW MORE button — centered, outline style exactly like screenshot */}
+        {/* View More */}
         <div className="flex justify-center mt-16">
           <Link
             href="/shop"
